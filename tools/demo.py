@@ -109,8 +109,7 @@ def parse_args():
     parser.add_argument('--cpu', dest='cpu_mode',
                         help='Use CPU mode (overrides --gpu)',
                         action='store_true')
-    parser.add_argument('--net', dest='demo_net', help='Path of Caffe model',
-                         default='vgg16')
+    parser.add_argument('--lite', dest='lite', action='store_true', help='Wheter to use the lite version.')
 
     args = parser.parse_args()
 
@@ -123,9 +122,13 @@ if __name__ == '__main__':
     cfg_from_file("models/pvanet/cfgs/submit_160715.yml")
    
     args = parse_args()
-
-    prototxt =  "models/pvanet/full/test.pt"
-    caffemodel = "models/pvanet/full/test.model"
+    if args.lite:
+        prototxt = "models/pvanet/lite/test.pt"
+        caffemodel = "models/pvanet/lite/test.model"
+        
+    else:
+        prototxt = "models/pvanet/full/test.pt"
+        caffemodel = "models/pvanet/full/test.model"
 
 
     if not os.path.isfile(caffemodel):
