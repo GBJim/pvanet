@@ -35,10 +35,11 @@ from natsort import natsorted
 
 def get_data_map(path="/root/data", prefix="data-"):
     data_map = {} 
-    data_paths = glob.glob("{}/{}*")
+    data_paths = glob.glob("{}/{}*".format(path, prefix))
     for data_path in data_paths:
-        name = os.path.basename(data_path)
+        name = os.path.basename(data_path)[5:]
         data_map[name] = data_path
+    return data_map    
 
 data_map = get_data_map()
 data_names = data_map.keys()
@@ -48,12 +49,28 @@ data_names = data_map.keys()
 def has_data(name):
     return name in data_names
 
+def load_meta(meta_path):
+    if os.path.exists(meta_path):
+        meta = json.load(open(meta_path))
+    else:
+       
+        meta = {"format":"jpg"}
+        meta["train"] = {"start":None, "end":None, "stride":1, "sets":[0]}
+        meta["test"] = {"start":None, "end":None, "stride":30, "sets":[1]}
+        print("Meta data path: {} does not exist. Use Default meta data: {}".format(meta_path, meta))
+    return meta
+    
+    
+
+
 
 class VaticData(imdb):
-    def __init__(self, name, class_set_name, train_split="train", test_split="test"):
+    def __init__(self, name, class_set_name="pedestrian", train_split="train", test_split="test"):
         
         imdb.__init__(self,'vatic_' + name)
-        
+        assert data_map.has_key(name),\
+        'The {} dataset does not exist. The available dataset are: {}'.format(name, data_map.keys())
+            
         self._data_path = data_map[name]  
         assert os.path.exists(self._data_path), \
         'Path does not exist: {}'.format(self._data_path)
@@ -69,18 +86,17 @@ class VaticData(imdb):
         
         
         meta_data_path = os.path.join(self._data_path, "meta.json")         
-        assert os.path.exists(meta_data_path), \
-                'Meta data path does not exist.: {}'.format(meta_data_path)
+       
             
-        self._meta = json.load(open(meta_data_path))
+        self._meta = load_meta(meta_data_path)
         if train_split == "train" or "test":
-            self._train_meta = self.meta[train_split]
+            self._train_meta = self._meta[train_split]
         else:
             raise("Options except train and test are not supported!")
             
             
         if test_split == "train" or "test":
-            self._train_meta = self.meta[test_split]
+            self._train_meta = self._meta[test_split]
         else:
             raise("Options except train and test are not supported!")
         
@@ -157,18 +173,19 @@ class VaticData(imdb):
         if start is None:
             start = 0
             
-        for set_num in image_set_list:
-            img_pattern = "{}/set{}/V000/set{}_V*".format(image_path,set_num,set_num)       
-            img_paths = natsorted(glob.glob(file_pattern))
+        for set_num in self._meta["train"]["sets"]:
+            img_pattern = "{}/set0{}/V000/set0{}_V*.jpg".format(image_path,set_num,set_num)       
+            img_paths = natsorted(glob.glob(img_pattern))
+            print(img_paths)
             
             first_ind = start
-            last_ind = end if end else len(file_pattern)
+            last_ind = end if end else len(img_paths)
             for i in range(first_ind, last_ind, stride):
                 img_path = img_paths[i]
-                img_name = os.path.base(img_path)
+                img_name = os.path.basename(img_path)
                 target_imgs.append(img_name[:-4])
                
-                     
+        print("Total: {} images".format(target_imgs))            
         return target_imgs                  
             
                                 
@@ -196,7 +213,8 @@ class VaticData(imdb):
         gt_roidb = []
         for index in self.image_index:
             set_num, v_num, frame = index.split("_")
-            set_num = str(int(set_num[:-2]))
+            #print(set_num)
+            set_num = str(int(set_num[-2:]))
             
             
             boxes = self._load_boxes(set_num, frame)
@@ -232,9 +250,15 @@ class VaticData(imdb):
     #Assign negtaive example to __background__ as whole image
     def _load_boxes(self, set_num ,frame):
      
-        bboxes = self._annotation[set_num][frame]
-        num_objs = len(bboxes)
+        bboxes = self._annotation[set_num].get(frame, {}).values()
+        #print(frame, "Before", bboxes)
+        bboxes = [bbox for bbox in bboxes if bbox['outside']==0 and bbox['occluded']==0]
+        if len(bboxes) > 0:
+            print("After", bboxes)
         
+        num_objs = len(bboxes)
+        if num_objs > 0:
+            print(bboxes)
             
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
@@ -245,22 +269,24 @@ class VaticData(imdb):
         #Becareful about the coordinate format
         # Load object bounding boxes into a data frame.
   
-        
+        #print(bboxes)
         # This is possitive example
         for ix, bbox in enumerate(bboxes):
-            
+            #print(bbox)
+         
           
             x1 = float(bbox['x1'])
             y1 = float(bbox['y1'])
             width = float(bbox['width'])
             height = float(bbox['height'])
             x2 = x1 + width 
-            y2 = y2 + height
+            y2 = y1 + height
             label = bbox['label']
             cls = self._class_to_ind[label]
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = 1  #Must be pedestrian
             overlaps[ix, cls] = 1.0
+            
             
              
             seg_areas[ix] = (x2 - x1) * (y2 - y1)
@@ -405,5 +431,5 @@ if __name__ == '__main__':
     name = "chruch_street"
     class_set_name = "pedestrian"
     d = VaticData(name, class_set_name)
-    res = d.roidb
+    #res = d.roidb
     from IPython import embed; embed()
