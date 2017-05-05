@@ -14,7 +14,7 @@ layer {
   python_param {
     module: 'roi_data_layer.layer'
     layer: 'RoIDataLayer'
-    param_str: "'num_classes': 21"
+    param_str: "'num_classes': 2"
   }
 }
 
@@ -6529,7 +6529,7 @@ layer {
   python_param {
     module: 'rpn.proposal_target_layer'
     layer: 'ProposalTargetLayer'
-    param_str: "'num_classes': 21"
+    param_str: "'num_classes': 2"
   }
 }
 
@@ -6703,27 +6703,27 @@ layer {
   top: "fc7"
 }
 layer {
-  name: "cls_score"
+  name: "cls_score-pedestrian"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "cls_score"
+  top: "cls_score-pedestrian"
   param { lr_mult: 1.0 }
   param { lr_mult: 2.0 }
   inner_product_param {
-    num_output: 21
+    num_output: 2
     weight_filler { type: "gaussian" std: 0.01 }
     bias_filler { type: "constant" value: 0 }
   }
 }
 layer {
-  name: "bbox_pred"
+  name: "bbox_pred-pedestrian"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "bbox_pred"
+  top: "bbox_pred-pedestrian"
   param { lr_mult: 1.0 }
   param { lr_mult: 2.0 }
   inner_product_param {
-    num_output: 84
+    num_output: 8
     weight_filler { type: "gaussian" std: 0.001 }
     bias_filler { type: "constant" value: 0 }
   }
@@ -6731,7 +6731,7 @@ layer {
 layer {
   name: "loss_cls"
   type: "SoftmaxWithLoss"
-  bottom: "cls_score"
+  bottom: "cls_score-pedestrian"
   bottom: "labels"
   propagate_down: 1
   propagate_down: 0
@@ -6743,7 +6743,7 @@ layer {
 layer {
   name: "loss_bbox"
   type: "SmoothL1Loss"
-  bottom: "bbox_pred"
+  bottom: "bbox_pred-pedestrian"
   bottom: "bbox_targets"
   bottom: "bbox_inside_weights"
   bottom: "bbox_outside_weights"
@@ -6754,7 +6754,7 @@ layer {
 layer {
   name: "cls_prob"
   type: "Softmax"
-  bottom: "cls_score"
+  bottom: "cls_score-pedestrian"
   top: "cls_prob"
   include { phase: TEST }
   loss_param {

@@ -61,7 +61,68 @@ def load_meta(meta_path):
     return meta
     
     
+class VaticGroup(imdb):
+    
+    def _check_consistency(self):
+        for vatic in self._vatics[1:]:
+            assert self._vatics[0]._classes == vatic._classes, \
+            "The class set are inconsistent.  {}/{}  and {}/{}".format(self._vatics[0].name,\
+                                                                       self._vatics[0]._classes, vatic.name, vatic._classes)
+    def _get_image_index(self):
+        
+        
+        def restore_path(vatic):
+            paths = []
+            for img_index in vatic._image_index:
+                set_num = img_index[:5]
+                path = os.path.join(vatic._data_path, "images", set_num, "V000",img_index)
+                paths.append(path)
+            return paths
+        
+        
+        target_imgs = []
+        for vatic in self._vatics:
+            target_imgs += restore_path(vatic)
+        return target_imgs    
+            
+    def image_path_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return self._image_index[i] + self._image_ext
+    
+    
+    
+    def gt_roidb(self):
+ 
+       
+        gt_roidb = []
+        for vatic in self._vatics:
+            for index in vatic._image_index:
+                set_num, v_num, frame = index.split("_")
+                set_num = str(int(set_num[-2:]))
+                boxes = vatic._load_boxes(set_num, frame)
+                gt_roidb.append(boxes)
+        return gt_roidb
 
+
+    
+    def __init__(self, vatics):
+        self._vatics = vatics
+        self._check_consistency()
+        name = " ".join([vatic.name for vatic in vatics])
+        
+        imdb.__init__(self,'Vatic Group:{}'.format(name))
+         
+     
+
+        self._image_ext = '.jpg'
+        self._image_index = self._get_image_index()
+
+
+        
+        
+        
 
 
 class VaticData(imdb):
@@ -136,19 +197,6 @@ class VaticData(imdb):
         return  [line.strip() for line in f]
     
     
-       
-    def all_index(self, image_set_list):
-        image_index = []        
-        for set_num in self._annotation:
-            if int(set_num[3:]) in image_set_list:
-                print("Loading: {}".format(set_num))
-                for v_num in self._annotation[set_num]:
-                    for frame_num in self._annotation[set_num][v_num]["frames"]:
-                        image_index.append("{}_{}_{}".format(set_num, v_num, frame_num))
-                     
-        return image_index                   
-                    
-
    
         
 
@@ -190,18 +238,7 @@ class VaticData(imdb):
             
                                 
     
-                        
-        
-         
-    
-    
-
-    def _get_default_path(self):
-        """
-        Return the default path where PASCAL VOC is expected to be installed.
-        """
-        return os.path.join(cfg.DATA_DIR, 'VOCdevkit' + self._year)
-
+  
     def gt_roidb(self):
         """
         Return the database of ground-truth regions 
@@ -428,8 +465,15 @@ class VaticData(imdb):
 #Unit Test
 if __name__ == '__main__':
     from datasets.vatic import VaticData
-    name = "chruch_street"
+    from datasets.vatic import VaticGroup
+    
     class_set_name = "pedestrian"
-    d = VaticData(name, class_set_name)
-    #res = d.roidb
+    name_a = "chruch_street"
+    
+    A = VaticData("chruch_street", class_set_name)
+    B = VaticData("YuDa", class_set_name)
+    group = VaticGroup([A,B])
+    
+    
+    
     from IPython import embed; embed()
