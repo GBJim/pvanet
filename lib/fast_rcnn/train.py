@@ -23,11 +23,11 @@ class SolverWrapper(object):
     use to unnormalize the learned bounding-box regression weights.
     """
 
-    def __init__(self, solver_prototxt, roidb, output_dir,
+    def __init__(self, solver_prototxt, roidb, output_dir,model_name,
                  pretrained_model=None):
         """Initialize the SolverWrapper."""
         self.output_dir = output_dir
-
+        self.model_name = model_name
         if (cfg.TRAIN.HAS_RPN and cfg.TRAIN.BBOX_REG and
             cfg.TRAIN.BBOX_NORMALIZE_TARGETS):
             # RPN can only use precomputed normalization because there are no
@@ -67,7 +67,7 @@ class SolverWrapper(object):
             orig_0 = net.params['bbox_pred'][0].data.copy()
             orig_1 = net.params['bbox_pred'][1].data.copy()
 
-            # scale and shift with bbox reg unnormalization; then save snapshot
+            # scale and shift with bbox reg unnormalization; then save model_name
             net.params['bbox_pred'][0].data[...] = \
                     (net.params['bbox_pred'][0].data *
                      self.bbox_stds[:, np.newaxis])
@@ -77,7 +77,7 @@ class SolverWrapper(object):
 
         infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
                  if cfg.TRAIN.SNAPSHOT_INFIX != '' else '')
-        filename = (self.solver_param.snapshot_prefix + infix +
+        filename = (self.model_name +
                     '_iter_{:d}'.format(self.solver.iter) + '.caffemodel')
         filename = os.path.join(self.output_dir, filename)
 
@@ -148,12 +148,12 @@ def filter_roidb(roidb):
                                                        num, num_after)
     return filtered_roidb
 
-def train_net(solver_prototxt, roidb, output_dir,
+def train_net(solver_prototxt, roidb, output_dir, model_name,
               pretrained_model=None, max_iters=40000):
     """Train a Fast R-CNN network."""
 
     roidb = filter_roidb(roidb)
-    sw = SolverWrapper(solver_prototxt, roidb, output_dir,
+    sw = SolverWrapper(solver_prototxt, roidb, output_dir,model_name,
                        pretrained_model=pretrained_model)
 
     print 'Solving...'
