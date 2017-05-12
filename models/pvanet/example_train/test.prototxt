@@ -6396,7 +6396,7 @@ layer {
   param { lr_mult: 1.0 decay_mult: 1.0 }
   param { lr_mult: 2.0 decay_mult: 0 }
   convolution_param {
-    num_output: 4   # 2(bg/fg) * 42(anchors)
+    num_output: 84   # 2(bg/fg) * 42(anchors)
     kernel_size: 1 pad: 0 stride: 1
     weight_filler { type: "gaussian" std: 0.01 }
     bias_filler { type: "constant" value: 0 }
@@ -6438,7 +6438,7 @@ layer {
   type: 'Reshape'
   bottom: 'rpn_cls_prob'
   top: 'rpn_cls_prob_reshape'
-  reshape_param { shape { dim: 0 dim: 4 dim: -1 dim: 0 } }
+  reshape_param { shape { dim: 0 dim: 84 dim: -1 dim: 0 } }
 }
 layer {
   name: 'proposal'
@@ -6645,10 +6645,10 @@ layer {
   top: "fc7"
 }
 layer {
-  name: "cls_score"
+  name: "cls_score-pedestrian"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "cls_score"
+  top: "cls_score-pedestrian"
   param { lr_mult: 1.0 }
   param { lr_mult: 2.0 }
   inner_product_param {
@@ -6658,14 +6658,14 @@ layer {
   }
 }
 layer {
-  name: "bbox_pred"
+  name: "bbox_pred-pedestrian"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "bbox_pred"
+  top: "bbox_pred-pedestrian"
   param { lr_mult: 1.0 }
   param { lr_mult: 2.0 }
   inner_product_param {
-    num_output: 4
+    num_output: 8
     weight_filler { type: "gaussian" std: 0.001 }
     bias_filler { type: "constant" value: 0 }
   }
@@ -6673,7 +6673,7 @@ layer {
 layer {
   name: "cls_prob"
   type: "Softmax"
-  bottom: "cls_score"
+  bottom: "cls_score-pedestrian"
   top: "cls_prob"
   include { phase: TEST }
   loss_param {

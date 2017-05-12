@@ -21,6 +21,12 @@ import os
 from utils.cython_bbox import bbox_overlaps
 
 
+def get_layer_name(blobs_out, prefix):
+    for layer_name in blobs_out.keys():
+        if prefix in layer_name:
+            return layer_name
+    
+
 def _get_image_blob(im):
     """Converts an image into a network input.
 
@@ -185,7 +191,8 @@ def im_detect(net, im, _t, boxes=None):
 
     if cfg.TEST.BBOX_REG:
         # Apply bounding-box regression deltas
-        box_deltas = blobs_out['bbox_pred']
+        bbox_pred_name = get_layer_name(blobs_out, "bbox_pred")
+        box_deltas = blobs_out[bbox_pred_name]
         pred_boxes = bbox_transform_inv(boxes, box_deltas)
         pred_boxes = clip_boxes(pred_boxes, im.shape)
     else:
