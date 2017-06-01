@@ -74,6 +74,9 @@ def parse_args():
     
     parser.add_argument('--output', dest='output',  help='model to test', type=str)
     parser.add_argument('--data', dest='data', help='dataset to test', type=str)
+    parser.add_argument('--skip', dest='skip', help='skip of the testing', type=int, default=None)
+    parser.add_argument('--class', dest='CLS', help='class name to specicied', type=str, default="pedestrian")
+
     
     
     parser.add_argument('--net', dest='net',
@@ -93,7 +96,7 @@ def parse_args():
 
 
 
-def write_testing_results_file(net, imdb):
+def write_testing_results_file(net, imdb, skip):
 
 
 
@@ -138,7 +141,7 @@ def write_testing_results_file(net, imdb):
         image_path = os.path.join(imdb._data_path, "images")
         start_frame = imdb._meta["test"]["start"]
         end_frame = imdb._meta["test"]["end"]
-        frame_stride = imdb._meta["test"]["stride"]
+        frame_stride = skip if skip else imdb._meta["test"]["stride"]
         
         if start_frame is None:
             start_frame = 0
@@ -207,7 +210,7 @@ def write_testing_results_file(net, imdb):
                     height =  bbox[3] - bbox[1] 
                     label = cls
                     socre = bbox[-1] * 100
-                    w.write("{},{},{},{},{},{},{}\n".format(frame_num,label, x, y, width, height, score))
+                    w.write("{},{},{},{},{},{},{}\n".format(frame_num, x, y, width, height, score, label))
           
 
             
@@ -227,7 +230,7 @@ def write_testing_results_file(net, imdb):
     image_set_list = [ str(set_num).zfill(2) for set_num in imdb._meta["test"]["sets"]]
     target_frames, total_frames = get_target_frames(image_set_list,  imdb)
     #print(target_frames)
-    #print(total_frames)
+    #print(total_frames)imdb
 
 
     current_frames = 0 
@@ -268,7 +271,8 @@ if __name__ == '__main__':
     cfg_from_file("models/pvanet/cfgs/submit_1019.yml")
     #cfg.TEST.HAS_RPN = True
     args = parse_args()
-    imdb = get_imdb(args.data)
+    print(args.CLS)
+    imdb = get_imdb(args.data, args.CLS)
     
     global OUTPUT_DIR
     
@@ -301,4 +305,4 @@ if __name__ == '__main__':
     
     print("PVANET Loaded")
     print("Start Detecting")
-    write_testing_results_file(net, imdb)      
+    write_testing_results_file(net, imdb, args.skip)      

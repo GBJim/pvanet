@@ -12,7 +12,8 @@
 import _init_paths
 from fast_rcnn.train import get_training_roidb, train_net
 from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
-from datasets.factory import get_imdb
+#from datasets.factory import get_imdb
+from datasets.vatic import VaticData
 import datasets.imdb
 from datasets.vatic import VaticGroup
 import caffe
@@ -20,6 +21,7 @@ import argparse
 import pprint
 import numpy as np
 import sys
+import os
 
 def parse_args():
     """
@@ -61,8 +63,8 @@ def parse_args():
 
 def combined_roidb(imdb):
     def get_roidb(imdb):
-        imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
         print 'Set proposal method: {:s}'.format(cfg.TRAIN.PROPOSAL_METHOD)
+        imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
         roidb = get_training_roidb(imdb)
         return roidb
 
@@ -70,6 +72,46 @@ def combined_roidb(imdb):
     roidb = get_roidb(imdb)
   
     return imdb, roidb
+
+
+
+
+
+
+def train_group(net_params, vatic_names, class_set_name , output_dir,  CLS_mapper={}, GPU_ID=0, \
+                randomize=False, cfg="models/pvanet/cfgs/train.yml"):
+    
+    cfg_from_file(cfg)
+     
+    print('Using config:')
+    pprint.pprint(cfg)
+    
+    #if not randomize:
+        # fix the random seeds (numpy and caffe) for reproducibility
+        #np.random.seed(cfg.RNG_SEED)
+        #caffe.set_random_seed(cfg.RNG_SEED)
+
+    caffe.set_mode_gpu()
+    caffe.set_device(GPU_ID)
+    imdbs = [VaticData(vatic_name, class_set_name, CLS_mapper=CLS_mapper) for vatic_name in vatic_names]
+    vatic_group = VaticGroup(imdbs)
+
+    imdb, roidb = combined_roidb(vatic_group)
+    print '{:d} roidb entries'.format(len(roidb))
+    
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+    print 'Trained model will be saved to `{:s}`'.format(output_dir)
+    
+    
+    solver, train_pt, caffenet, max_iters, model_name = net_params
+    train_net(solver, roidb, output_dir, model_name,
+              pretrained_model=caffenet, max_iters=max_iters)
+    
+    
+    
+    
+    
 
 if __name__ == '__main__':
     args = parse_args()
@@ -96,7 +138,7 @@ if __name__ == '__main__':
     caffe.set_mode_gpu()
     caffe.set_device(args.gpu_id)
     IMDB_NAMES = ["chruch_street", "YuDa"]
-    imdbs = [get_imdb(imdb_name) for imdb_name in IMDB_NAMES]
+    imdbs = [(imdb_name) for imdb_name in IMDB_NAMES]
 
     vatic_group = VaticGroup(imdbs)
         

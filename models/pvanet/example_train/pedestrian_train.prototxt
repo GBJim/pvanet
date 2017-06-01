@@ -4,18 +4,30 @@ name: "PVANET"
 ## Input
 ################################################################################
 
-input: "data"
-input_shape {
-  dim: 1
-  dim: 3
-  dim: 640
-  dim: 1056
+layer {
+  name: 'input-data'
+  type: 'Python'
+  top: 'data'
+  top: 'im_info'
+  top: 'gt_boxes'
+  include { phase: TRAIN }
+  python_param {
+    module: 'roi_data_layer.layer'
+    layer: 'RoIDataLayer'
+    param_str: "'num_classes': 2"
+  }
 }
 
-input: "im_info"
-input_shape {
-  dim: 1
-  dim: 6
+layer {
+  name: "input-data"
+  type: "DummyData"
+  top: "data"
+  top: "im_info"
+  include { phase: TEST }
+  dummy_data_param {
+    shape { dim: 1 dim: 3 dim: 224 dim: 224 }
+    shape { dim: 1 dim: 3 }
+  }
 }
 
 ################################################################################
@@ -6423,6 +6435,48 @@ layer {
    type: "Reshape"
    reshape_param { shape { dim: 0 dim: 2 dim: -1 dim: 0 } }
 }
+layer {
+  name: 'rpn-data'
+  type: 'Python'
+  bottom: 'rpn_cls_score'
+  bottom: 'gt_boxes'
+  bottom: 'im_info'
+  bottom: 'data'
+  top: 'rpn_labels'
+  top: 'rpn_bbox_targets'
+  top: 'rpn_bbox_inside_weights'
+  top: 'rpn_bbox_outside_weights'
+  include { phase: TRAIN }
+  python_param {
+    module: 'rpn.anchor_target_layer'
+    layer: 'AnchorTargetLayer'
+    param_str: "{'feat_stride': 16, 'ratios': [0.333, 0.5, 0.667, 1, 1.5, 2, 3], 'scales': [2, 3, 5, 9, 16, 32]}"
+  }
+}
+layer {
+  name: "rpn_loss_cls"
+  type: "SoftmaxWithLoss"
+  bottom: "rpn_cls_score_reshape"
+  bottom: "rpn_labels"
+  propagate_down: 1
+  propagate_down: 0
+  top: "rpn_loss_cls"
+  include { phase: TRAIN }
+  loss_weight: 1
+  loss_param { ignore_label: -1 normalize: true }
+}
+layer {
+  name: "rpn_loss_bbox"
+  type: "SmoothL1Loss"
+  bottom: "rpn_bbox_pred"
+  bottom: "rpn_bbox_targets"
+  bottom: "rpn_bbox_inside_weights"
+  bottom: "rpn_bbox_outside_weights"
+  top: "rpn_loss_bbox"
+  include { phase: TRAIN }
+  loss_weight: 1
+  smooth_l1_loss_param { sigma: 3.0 }
+}
   
 ################################################################################
 ## Proposal
@@ -6446,32 +6500,36 @@ layer {
   bottom: 'rpn_cls_prob_reshape'
   bottom: 'rpn_bbox_pred'
   bottom: 'im_info'
+  top: 'rpn_rois'
+  top: 'rpn_scores'
+  include { phase: TRAIN }
+  python_param {
+    module: 'rpn.proposal_layer'
+    layer: 'ProposalLayer'
+    param_str: "{'feat_stride': 16, 'ratios': [0.333, 0.5, 0.667, 1, 1.5, 2, 3], 'scales': [2, 3, 5, 9, 16, 32]}"
+  }
+}
+layer {
+  name: 'mute_rpn_scores'
+  bottom: 'rpn_scores'
+  type: 'Silence'
+  include { phase: TRAIN }
+}
+layer {
+  name: 'roi-data'
+  type: 'Python'
+  bottom: 'rpn_rois'
   bottom: 'gt_boxes'
   top: 'rois'
   top: 'labels'
   top: 'bbox_targets'
   top: 'bbox_inside_weights'
   top: 'bbox_outside_weights'
-  include { phase: TRAIN }
+  include { phase: TRAIN }	
   python_param {
-    module: 'rpn.proposal_layer'
-    layer: 'ProposalLayer2'
-    param_str: "{'feat_stride': 16, 'num_classes': 21, 'ratios': [0.333, 0.5, 0.667, 1, 1.5, 2, 3], 'scales': [2, 3, 5, 9, 16, 32]}"
-  }
-}
-layer {
-  name: 'proposal'
-  type: 'Python'
-  bottom: 'rpn_cls_prob_reshape'
-  bottom: 'rpn_bbox_pred'
-  bottom: 'im_info'
-  top: 'rois'
-  top: 'scores'
-  include { phase: TEST }
-  python_param {
-    module: 'rpn.proposal_layer'
-    layer: 'ProposalLayer'
-    param_str: "{'feat_stride': 16, 'ratios': [0.333, 0.5, 0.667, 1, 1.5, 2, 3], 'scales': [2, 3, 5, 9, 16, 32]}"
+    module: 'rpn.proposal_target_layer'
+    layer: 'ProposalTargetLayer'
+    param_str: "'num_classes': 2"
   }
 }
 
@@ -6645,35 +6703,58 @@ layer {
   top: "fc7"
 }
 layer {
-  name: "cls_score"
+  name: "cls_score-pedestrian"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "cls_score"
+  top: "cls_score-pedestrian"
   param { lr_mult: 1.0 }
   param { lr_mult: 2.0 }
   inner_product_param {
-    num_output: 21
+    num_output: 2
     weight_filler { type: "gaussian" std: 0.01 }
     bias_filler { type: "constant" value: 0 }
   }
 }
 layer {
-  name: "bbox_pred"
+  name: "bbox_pred-pedestrian"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "bbox_pred"
+  top: "bbox_pred-pedestrian"
   param { lr_mult: 1.0 }
   param { lr_mult: 2.0 }
   inner_product_param {
-    num_output: 84
+    num_output: 8
     weight_filler { type: "gaussian" std: 0.001 }
     bias_filler { type: "constant" value: 0 }
   }
 }
 layer {
+  name: "loss_cls"
+  type: "SoftmaxWithLoss"
+  bottom: "cls_score-pedestrian"
+  bottom: "labels"
+  propagate_down: 1
+  propagate_down: 0
+  top: "loss_cls"
+  include { phase: TRAIN }
+  loss_weight: 1
+  loss_param { ignore_label: -1 normalize: true }
+}
+layer {
+  name: "loss_bbox"
+  type: "SmoothL1Loss"
+  bottom: "bbox_pred-pedestrian"
+  bottom: "bbox_targets"
+  bottom: "bbox_inside_weights"
+  bottom: "bbox_outside_weights"
+  top: "loss_bbox"
+  include { phase: TRAIN }
+  loss_weight: 1
+}
+layer {
   name: "cls_prob"
   type: "Softmax"
-  bottom: "cls_score"
+  bottom: "cls_score-pedestrian"
   top: "cls_prob"
   include { phase: TEST }
   loss_param {
