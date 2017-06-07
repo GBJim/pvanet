@@ -283,6 +283,7 @@ if __name__ == '__main__':
     if not os.path.exists(OUTPUT_DIR ):
         os.makedirs(OUTPUT_DIR ) 
     CLASSES = imdb.classes
+    print(CLASSES)
     prototxt =  args.net
     caffemodel = args.weights
 
@@ -305,4 +306,5 @@ if __name__ == '__main__':
     
     print("PVANET Loaded")
     print("Start Detecting")
+    print(CLASSES)
     write_testing_results_file(net, imdb, args.skip)      

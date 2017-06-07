@@ -57,9 +57,66 @@ def load_meta(meta_path):
         meta = {"format":"jpg"}
         meta["train"] = {"start":None, "end":None, "stride":1, "sets":[0]}
         meta["test"] = {"start":None, "end":None, "stride":30, "sets":[1]}
-        print("Meta data path: {} does not exist. Use Default meta data: {}".format(meta_path, meta))
+        print("Meta data path: {} does not exist. Use Default meta data".format(meta_path))
     return meta
+ 
     
+    
+class IMDBGroup(imdb):
+    
+    
+    def _check_consistency(self):
+        
+        for dataset in self._datasets[1:]:
+            assert self._datasets[0]._classes == dataset._classes, \
+            "The class set are inconsistent.  {}/{}  and {}/{}".format(self._datasets[0].name,\
+                                                                       self._datasets[0]._classes, dataset.name, dataset._classes)
+    
+    def _get_img_paths(self):
+        
+        
+        img_paths = []
+        
+        for dataset in self._datasets:
+            for i in range(len(dataset._image_index)):
+                img_path = dataset.image_path_at(i)
+                img_paths.append(img_path)
+            
+        return img_paths   
+            
+    def image_path_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return self._image_index[i]
+    
+    
+    
+    def gt_roidb(self):
+        
+        gt_roidb = []
+        for dataset in self._datasets:
+            gt_roidb += dataset.gt_roidb()
+        return gt_roidb
+
+    
+    def __init__(self, datasets):
+        self._datasets = datasets
+        self._check_consistency()
+        self._classes = self._datasets[0]._classes
+        name = " ".join([dataset.name for dataset in datasets])
+        
+        imdb.__init__(self,'IMDB Groups:{}'.format(name))
+      
+
+        self._image_index = self._get_img_paths()
+        
+        
+        
+        
+
+
+
     
 class VaticGroup(imdb):
     
@@ -92,7 +149,7 @@ class VaticGroup(imdb):
         return self._image_index[i] + self._image_ext
     
     
-    
+    image_path_at
     def gt_roidb(self):
  
        
@@ -121,12 +178,12 @@ class VaticGroup(imdb):
 
 
         
-        
+     
         
 
 
 class VaticData(imdb):
-    def __init__(self, name, class_set_name="pedestrian", train_split="train", test_split="test"):
+    def __init__(self, name, class_set_name, train_split="train", test_split="test", CLS_mapper={}):
         
         imdb.__init__(self,'vatic_' + name)
         assert data_map.has_key(name),\
@@ -136,6 +193,7 @@ class VaticData(imdb):
         assert os.path.exists(self._data_path), \
         'Path does not exist: {}'.format(self._data_path)
         
+        self.CLS_mapper = CLS_mapper
         
         self._classes = CLASS_SETS[class_set_name]
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
@@ -145,19 +203,25 @@ class VaticData(imdb):
                 'Annotation path does not exist.: {}'.format(annotation_path)
         self._annotation = json.load(open(annotation_path))   
         
-        
         meta_data_path = os.path.join(self._data_path, "meta.json")         
        
             
         self._meta = load_meta(meta_data_path)
-        if train_split == "train" or "test":
-            self._train_meta = self._meta[train_split]
+        
+        if train_split == "train" or train_split ==  "test":
+            pass
+        elif train_split == "all":
+            print("Use both split for training")
+            self._meta["train"]["sets"] +=  self._meta["test"]["sets"]
         else:
             raise("Options except train and test are not supported!")
             
             
-        if test_split == "train" or "test":
-            self._train_meta = self._meta[test_split]
+        if test_split == "train" or test_split ==  "test":
+            pass
+        elif test_split == "all":
+            print("Use both split for testing")
+            self._meta["test"]["sets"] +=  self._meta["train"]["sets"]
         else:
             raise("Options except train and test are not supported!")
         
@@ -224,7 +288,7 @@ class VaticData(imdb):
         for set_num in self._meta["train"]["sets"]:
             img_pattern = "{}/set0{}/V000/set0{}_V*.jpg".format(image_path,set_num,set_num)       
             img_paths = natsorted(glob.glob(img_pattern))
-            print(img_paths)
+            #print(img_paths)
             
             first_ind = start
             last_ind = end if end else len(img_paths)
@@ -232,8 +296,8 @@ class VaticData(imdb):
                 img_path = img_paths[i]
                 img_name = os.path.basename(img_path)
                 target_imgs.append(img_name[:-4])
-               
-        print("Total: {} images".format(target_imgs))            
+        print(self._meta)       
+        print("Total: {} images".format(len(target_imgs)))            
         return target_imgs                  
             
                                 
@@ -290,12 +354,9 @@ class VaticData(imdb):
         bboxes = self._annotation[set_num].get(frame, {}).values()
         #print(frame, "Before", bboxes)
         bboxes = [bbox for bbox in bboxes if bbox['outside']==0 and bbox['occluded']==0]
-        if len(bboxes) > 0:
-            print("After", bboxes)
         
         num_objs = len(bboxes)
-        if num_objs > 0:
-            print(bboxes)
+       
             
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
@@ -319,9 +380,12 @@ class VaticData(imdb):
             x2 = x1 + width 
             y2 = y1 + height
             label = bbox['label']
+            #print(label, self.CLS_mapper)
+            if label in self.CLS_mapper:
+                label = self.CLS_mapper[label]
             cls = self._class_to_ind[label]
             boxes[ix, :] = [x1, y1, x2, y2]
-            gt_classes[ix] = 1  #Must be pedestrian
+            gt_classes[ix] = cls  
             overlaps[ix, cls] = 1.0
             
             
@@ -473,6 +537,7 @@ if __name__ == '__main__':
     A = VaticData("chruch_street", class_set_name)
     B = VaticData("YuDa", class_set_name)
     group = VaticGroup([A,B])
+    imdb_group = IMDBGroup([A,B])
     
     
     

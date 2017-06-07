@@ -15,10 +15,10 @@ from datasets.coco import coco
 import numpy as np
 
 
-def get_imdb(name):
+def get_imdb(name, class_set_name="pedestrian"):
     """Get an imdb (image database) by name."""
    
-    return VaticData(name)
+    return VaticData(name, class_set_name)
 
 def list_imdbs():
     """List all registered imdbs."""
