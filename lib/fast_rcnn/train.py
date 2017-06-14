@@ -24,8 +24,9 @@ class SolverWrapper(object):
     """
 
     def __init__(self, solver_prototxt, roidb, output_dir,model_name,
-                 pretrained_model=None):
+                 pretrained_model=None, bbox_pred_name="bbox_pred"):
         """Initialize the SolverWrapper."""
+        self.bbox_pred_name = bbox_pred_name
         self.output_dir = output_dir
         self.model_name = model_name
         if (cfg.TRAIN.HAS_RPN and cfg.TRAIN.BBOX_REG and
@@ -56,23 +57,24 @@ class SolverWrapper(object):
         """Take a snapshot of the network after unnormalizing the learned
         bounding-box regression weights. This enables easy use at test-time.
         """
+     
         net = self.solver.net
 
         scale_bbox_params = (cfg.TRAIN.BBOX_REG and
                              cfg.TRAIN.BBOX_NORMALIZE_TARGETS and
-                             net.params.has_key('bbox_pred'))
+                             net.params.has_key(self.bbox_pred_name))
 
         if scale_bbox_params:
             # save original values
-            orig_0 = net.params['bbox_pred'][0].data.copy()
-            orig_1 = net.params['bbox_pred'][1].data.copy()
+            orig_0 = net.params[self.bbox_pred_name][0].data.copy()
+            orig_1 = net.params[self.bbox_pred_name][1].data.copy()
 
             # scale and shift with bbox reg unnormalization; then save model_name
-            net.params['bbox_pred'][0].data[...] = \
-                    (net.params['bbox_pred'][0].data *
+            net.params[self.bbox_pred_name][0].data[...] = \
+                    (net.params[self.bbox_pred_name][0].data *
                      self.bbox_stds[:, np.newaxis])
-            net.params['bbox_pred'][1].data[...] = \
-                    (net.params['bbox_pred'][1].data *
+            net.params[self.bbox_pred_name][1].data[...] = \
+                    (net.params[self.bbox_pred_name][1].data *
                      self.bbox_stds + self.bbox_means)
 
         infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
@@ -86,8 +88,8 @@ class SolverWrapper(object):
 
         if scale_bbox_params:
             # restore net to original state
-            net.params['bbox_pred'][0].data[...] = orig_0
-            net.params['bbox_pred'][1].data[...] = orig_1
+            net.params[self.bbox_pred_name][0].data[...] = orig_0
+            net.params[self.bbox_pred_name][1].data[...] = orig_1
         return filename
 
     def train_model(self, max_iters):
@@ -148,13 +150,13 @@ def filter_roidb(roidb):
                                                        num, num_after)
     return filtered_roidb
 
-def train_net(solver_prototxt, roidb, output_dir, model_name,
+def train_net(solver_prototxt, roidb, output_dir, model_name,bbox_pred_name,
               pretrained_model=None, max_iters=40000):
     """Train a Fast R-CNN network."""
 
     roidb = filter_roidb(roidb)
     sw = SolverWrapper(solver_prototxt, roidb, output_dir,model_name,
-                       pretrained_model=pretrained_model)
+                       pretrained_model=pretrained_model, bbox_pred_name=bbox_pred_name)
 
     print 'Solving...'
     model_paths = sw.train_model(max_iters)
