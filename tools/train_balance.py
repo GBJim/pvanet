@@ -44,7 +44,7 @@ def combined_roidb(imdb):
 
 
 
-def train_coco_group(net_params, output_dir, image_set, year,  CLS_mapper={}, GPU_ID=1, randomize=False, cfg="models/pvanet/lite/train.yml"):
+def train_coco_group(net_params, output_dir, image_set, year,bbox_pred_name="bbox_pred-coco",  CLS_mapper={}, GPU_ID=1, randomize=False, cfg="models/pvanet/lite/train.yml"):
     
     cfg_from_file(cfg)
      
@@ -76,7 +76,7 @@ def train_coco_group(net_params, output_dir, image_set, year,  CLS_mapper={}, GP
     devkit_path = "/root/data/VOCdevkit"
     
     
-    mapper = {"tvmonitor":"tv", "sofa":"couch", "aeroplane":"airplane",\
+    mapper = {"tvmonitor":"tv", "sofa":"couch", "aeroplane":"airplane",
               "motorbike":"motorcycle", "diningtable":"dining table", "pottedplant":"potted plant"}
     
     
@@ -126,7 +126,7 @@ def train_coco_group(net_params, output_dir, image_set, year,  CLS_mapper={}, GP
     
     
     train_net(solver, roidb, output_dir, model_name,
-              pretrained_model=caffenet, max_iters=max_iters)
+              pretrained_model=caffenet, max_iters=max_iters, bbox_pred_name=bbox_pred_name)
     
     
     

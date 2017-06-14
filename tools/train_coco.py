@@ -44,7 +44,7 @@ def combined_roidb(imdb):
 
 
 
-def train_coco_group(net_params, output_dir, image_set, year,  CLS_mapper={}, GPU_ID=0, randomize=False, cfg="models/pvanet/lite/train.yml"):
+def train_coco_group(net_params, output_dir, image_set, year,bbox_pred_name="bbox_pred-coco",  CLS_mapper={}, GPU_ID=0, randomize=False, cfg="models/pvanet/lite/train.yml"):
     
     cfg_from_file(cfg)
      
@@ -68,13 +68,14 @@ def train_coco_group(net_params, output_dir, image_set, year,  CLS_mapper={}, GP
     
   
     
-    datasets = [coco_train, coco_val]
-    imdb_group = IMDBGroup(datasets)
+    #datasets = [coco_train, coco_val]
+    #imdb_group = IMDBGroup(datasets)
+    
     
     
     
    
-    imdb, roidb = combined_roidb(imdb_group)
+    imdb, roidb = combined_roidb(coco_train)
     
     print '{:d} roidb entries'.format(len(roidb))
     
@@ -85,7 +86,7 @@ def train_coco_group(net_params, output_dir, image_set, year,  CLS_mapper={}, GP
     
     solver, train_pt, caffenet, max_iters, model_name = net_params
     train_net(solver, roidb, output_dir, model_name,
-              pretrained_model=caffenet, max_iters=max_iters)
+              pretrained_model=caffenet, max_iters=max_iters, bbox_pred_name=bbox_pred_name)
     
     
     
@@ -114,6 +115,7 @@ if __name__ == '__main__':
     train_pt = "models/pvanet/lite/coco_train.prototxt"
     caffenet = "models/pvanet/lite/test.model"
     max_iters = 20 * 10000
+    #max_iters = 20
     output_name = "coco80"
     net_params = (solver, train_pt, caffenet, max_iters, output_name)
     
@@ -122,6 +124,6 @@ if __name__ == '__main__':
     year="2014"
     GPU_ID = 3
     
-    
-    train_coco_group(net_params, output_dir,image_set, year, GPU_ID=GPU_ID)
+   
+    train_coco_group(net_params, output_dir,image_set, year, GPU_ID=GPU_ID,  )
     

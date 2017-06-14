@@ -16,7 +16,7 @@ from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 #from datasets.vatic import VaticData
 import datasets.imdb
 #from datasets.vatic import VaticGroup
-from datasets.coco import coco
+from datasets.coco_new import coco
 from datasets.vatic import VaticData, IMDBGroup
 from datasets.pascal_voc_new import pascal_voc
 import caffe
@@ -44,7 +44,7 @@ def combined_roidb(imdb):
 
 
 
-def train_coco_group(net_params, output_dir, image_set, year,bbox_pred_name="bbox_pred-coco",CLS_mapper={}, GPU_ID=2, randomize=False, cfg="models/pvanet/lite/train.yml"):
+def train_coco_group(net_params, output_dir, image_set, year, CLASSES, bbox_pred_name="bbox_pred-coco",  CLS_mapper={}, GPU_ID=0, randomize=False, cfg="models/pvanet/lite/train.yml"):
     
     cfg_from_file(cfg)
      
@@ -66,11 +66,11 @@ def train_coco_group(net_params, output_dir, image_set, year,bbox_pred_name="bbo
     
     #cocos = [coco("train", "2014"), coco("test", "2014")]
      
-    coco_train = coco("train", year)
-    coco_val = coco("val", year)
+    coco_train = coco("train", year, CLASSES)
+    coco_val = coco("val", year, CLASSES)
     #global classes
-    classes = coco_val._classes
-    print(classes)
+    #classes = coco_val._classes
+    print(CLASSES)
     
     
     devkit_path = "/root/data/VOCdevkit"
@@ -80,8 +80,8 @@ def train_coco_group(net_params, output_dir, image_set, year,bbox_pred_name="bbo
               "motorbike":"motorcycle", "diningtable":"dining table", "pottedplant":"potted plant"}
     
     
-    voc2007 = pascal_voc(classes, "trainval", "2007", cls_mapper=mapper, devkit_path=devkit_path)
-    voc2012 = pascal_voc(classes, "trainval", "2012", cls_mapper=mapper, devkit_path=devkit_path)
+    voc2007 = pascal_voc(CLASSES, "trainval", "2007", cls_mapper=mapper, devkit_path=devkit_path)
+    voc2012 = pascal_voc(CLASSES, "trainval", "2012", cls_mapper=mapper, devkit_path=devkit_path)
     
     
     
@@ -89,14 +89,14 @@ def train_coco_group(net_params, output_dir, image_set, year,bbox_pred_name="bbo
     
     vatic_names = ["YuDa","A1HighwayDay", "B2HighwayNight"]
     
-    mapper = {"van":"car", "trailer-head":"truck",\
+    mapper = {"van":"car", "trailer-head":"car", "truck":"car",
               "sedan/suv":"car", "scooter":"motorcycle", "bike":"bicycle"}
     
     
     
-    vatics = [VaticData(vatic_name, "coco", CLS_mapper=mapper) for vatic_name in vatic_names]
+    vatics = [VaticData(vatic_name, "coco24", CLS_mapper=mapper, train_split="all") for vatic_name in vatic_names]
     
-    datasets = [coco_train, coco_val] + vatics  + [voc2007, voc2012]
+    datasets = vatics + [coco_train, coco_val] + [voc2007, voc2012] + vatics 
     
     #coco_data = coco(image_set, year)
     imdb_group = IMDBGroup(datasets)
@@ -110,6 +110,21 @@ def train_coco_group(net_params, output_dir, image_set, year,bbox_pred_name="bbo
     
     
     solver, train_pt, caffenet, max_iters, model_name = net_params
+    
+    
+    total_len = float(len(imdb_group.gt_roidb()))
+
+
+    for dataset in imdb_group._datasets:
+        img_nums = len(dataset.gt_roidb())   
+        print(dataset.name, img_nums,  "{0:.2f}%".format(img_nums/total_len * 100))
+    
+    
+    
+    
+    
+    
+    
     train_net(solver, roidb, output_dir, model_name,
               pretrained_model=caffenet, max_iters=max_iters, bbox_pred_name=bbox_pred_name)
     
@@ -127,17 +142,27 @@ if __name__ == '__main__':
     
     
     
-    solver = "models/pvanet/lite/coco_solver.prototxt"
-    train_pt = "models/pvanet/lite/coco_train.prototxt"
+    solver = "models/pvanet/lite/coco24_solver.prototxt"
+    train_pt = "models/pvanet/lite/coco24_train.prototxt"
     caffenet = "models/pvanet/lite/test.model"
     max_iters = 20 * 10000
-    output_name = "all-coco80"
+    output_name = "coco-24"
     net_params = (solver, train_pt, caffenet, max_iters, output_name)
-    bbox_pred_name = "bbox_pred-coco"
+    
     
     image_set = "train"
     year="2014"
     
     
-    train_coco_group(net_params, output_dir,image_set, year)
+        
+    CLASSES = ('__background__', # always index 0
+                         'airplane', 'bicycle', 'bird', 'boat',
+                         'bottle', 'bus', 'car', 'cat', 'chair',
+                         'cow', 'dining table', 'dog', 'horse',
+                         'motorcycle', 'person', 'potted plant',
+                         'sheep', 'couch', 'train', 'tv', 'handbag','backpack','suitcase')
+
+
+       
+    train_coco_group(net_params, output_dir,image_set, year, CLASSES)
     
