@@ -1632,14 +1632,14 @@ layer {
 ## output
 ################################################################################
 layer {
-  name: "cls_score-coco"
+  name: "cls_score-coco" #CCH: new layer name in here
   type: "InnerProduct"
   bottom: "fc7_U"
-  top: "cls_score-coco"
+  top: "cls_score-coco"  #CCH: new layer name in here
   param { lr_mult: 1  decay_mult: 1 }
   param { lr_mult: 2  decay_mult: 0 }
   inner_product_param {
-    num_output: 81
+    num_output: 81      #CCH: classes number in here
     weight_filler { type: "gaussian"  std: 0.01 }
     bias_filler { type: "constant"  value: 0 }
   }

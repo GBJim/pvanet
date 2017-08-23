@@ -1,4 +1,4 @@
-train_net: "models/pvanet/lite/train.prototxt"
+train_net: "models/pvanet/lite/coco100_train.prototxt"
 
 base_lr: 0.0005
 lr_policy: "step"
@@ -14,5 +14,5 @@ weight_decay: 0.0002
 # function
 snapshot: 0
 # We still use the snapshot prefix, though
-snapshot_prefix: "kai_train"
+snapshot_prefix: "coco100"
 iter_size: 25

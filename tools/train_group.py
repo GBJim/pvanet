@@ -12,7 +12,6 @@
 import _init_paths
 from fast_rcnn.train import get_training_roidb, train_net
 from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
-#from datasets.factory import get_imdb
 from datasets.vatic import VaticData
 import datasets.imdb
 from datasets.vatic import VaticGroup
@@ -105,7 +104,7 @@ def train_group(net_params, vatic_names, class_set_name , output_dir,  CLS_mappe
     
     
     solver, train_pt, caffenet, max_iters, model_name = net_params
-    train_net(solver, roidb, output_dir, model_name,
+    train_net(solver, roidb, output_dir, model_name,bbox_pred_name="bbox_pre",
               pretrained_model=caffenet, max_iters=max_iters)
     
     

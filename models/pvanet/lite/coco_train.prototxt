@@ -13,7 +13,7 @@ layer {
   python_param {
     module: 'roi_data_layer.layer'
     layer: 'RoIDataLayer'
-    param_str: "'num_classes': 81"
+    param_str: "'num_classes': 81"   #CCH: modify classes number here: K
   }
 }
 
@@ -1590,7 +1590,7 @@ layer {
   python_param {
     module: 'rpn.proposal_target_layer'
     layer: 'ProposalTargetLayer'
-    param_str: "'num_classes': 81"
+    param_str: "'num_classes': 81"  #CCH: change classes number in here
   }
 }
 #########################       kai          ###############################
@@ -1699,10 +1699,10 @@ layer {
 ## output
 ################################################################################
 layer {
-  name: "cls_score-coco"
+  name: "cls_score-coco"   #CCH:New Name in here
   type: "InnerProduct"
   bottom: "fc7_U"
-  top: "cls_score-coco"
+  top: "cls_score-coco"    #CCH:New Name in here
   param { lr_mult: 1  decay_mult: 1 }
   param { lr_mult: 2  decay_mult: 0 }
   inner_product_param {
@@ -1712,14 +1712,14 @@ layer {
   }
 }
 layer {
-  name: "bbox_pred-coco"
+  name: "bbox_pred-coco"  #CCH: new bbox_pred-coco in here
   type: "InnerProduct"
   bottom: "fc7_U"
   top: "bbox_pred-coco"
   param { lr_mult: 1  decay_mult: 1 }
   param { lr_mult: 2  decay_mult: 0 }
   inner_product_param {
-    num_output: 324
+    num_output: 324    #CCH: modify ouput in here   4*K
     weight_filler { type: "gaussian"  std: 0.001 }
     bias_filler { type: "constant"  value: 0 }
   }
