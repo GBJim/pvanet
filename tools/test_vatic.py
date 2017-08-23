@@ -14,6 +14,7 @@ See README.md for installation instructions before running.
 """
 import _init_paths
 from datasets.factory import get_imdb
+from datasets.config import CLASS_SETS
 from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list
 from fast_rcnn.test import im_detect
 from fast_rcnn.nms_wrapper import nms
@@ -96,8 +97,9 @@ def parse_args():
 
 
 
-def write_testing_results_file(net, imdb, skip):
-
+def write_testing_results_file(net, imdb, skip, OUTPUT_DIR, CLASSES):
+    
+  
 
 
     # The follwing nested fucntions are for smart sorting
@@ -264,47 +266,39 @@ def write_testing_results_file(net, imdb, skip):
 
 
 if __name__ == '__main__':
-    #cfg.TEST.HAS_RPN = True  # Use RPN for proposals
     
-    #cfg_from_file("models/pvanet/cfgs/submit_160715.yml")
-
+    
     cfg_from_file("models/pvanet/cfgs/submit_1019.yml")
-    #cfg.TEST.HAS_RPN = True
-    args = parse_args()
-    print(args.CLS)
-    imdb = get_imdb(args.data, args.CLS)
+    output_name = "PVANET"
+    data_name = "YuDa"    
+    classes = CLASS_SETS["coco"]
+    prototxt = "models/pvanet/lite/coco_test.prototxt"
+    caffemodel = "models/pvanet/lite/test.model"
+    FPS_rate = 1
+    GPU_ID = 3
+   
+
+
+    imdb = get_imdb(data_name, classes)
     
-    global OUTPUT_DIR
-    
-    
-    #data = data_info[args.data]
-    
-    OUTPUT_DIR= os.path.join(imdb._data_path ,"res" ,  args.output)
+   
+    OUTPUT_DIR= os.path.join(imdb._data_path ,"res" ,output_name)    
     if not os.path.exists(OUTPUT_DIR ):
         os.makedirs(OUTPUT_DIR ) 
-    CLASSES = imdb.classes
-    print(CLASSES)
-    prototxt =  args.net
-    caffemodel = args.weights
+   
+    
+  
 
 
     if not os.path.isfile(caffemodel):
-        raise IOError(('{:s} not found.\nDid you run ./data/script/'
-                       'fetch_faster_rcnn_models.sh?').format(caffemodel))
-
-    if args.cpu_mode:
-        caffe.set_mode_cpu()
-    else:
-        caffe.set_mode_gpu()
-        caffe.set_device(args.gpu_id)
-        cfg.GPU_ID = args.gpu_id
+        raise IOError(('Caffemodel: {:s} not found').format(caffemodel))      
+    caffe.set_device(GPU_ID)
+    cfg.GPU_ID = GPU_ID
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
-
     print '\n\nLoaded network {:s}'.format(caffemodel)
     
     
     
     print("PVANET Loaded")
-    print("Start Detecting")
-    print(CLASSES)
-    write_testing_results_file(net, imdb, args.skip)      
+    print("Start Detecting")    
+    write_testing_results_file(net, imdb, FPS_rate, OUTPUT_DIR, classes)      
