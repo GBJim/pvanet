@@ -1,17 +1,17 @@
-##VATIC branch of PVANET
-###This branch is dedicated on training/testing with the VATIC format of data.
+## VATIC branch of PVANET
+### This branch is dedicated on training/testing with the VATIC format of data.
 The following are examples for training/testing. You can get more details from reading the two example codes
 
 1. Example of training
  ```Shell    
     python tools/finetune_example.py
-    ```
+```
 
 
 2. Example of testing
 ```Shell    
     python tools/test_vatic.py
-    ```
+```
 
 
 
