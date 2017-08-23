@@ -1,3 +1,21 @@
+## VATIC branch of PVANET
+### This branch is dedicated on training/testing with the VATIC format of data.
+The following are examples for training/testing. You can get more details from reading the two example codes
+
+1. Example of training
+ ```Shell    
+    python tools/finetune_example.py
+```
+
+
+2. Example of testing
+```Shell    
+    python tools/test_vatic.py
+```
+
+
+
+
 ## PVANet: Lightweight Deep Neural Networks for Real-time Object Detection
 by Sanghoon Hong, Byungseok Roh, Kye-hyeon Kim, Yeongjae Cheon, Minje Park (Intel Imaging and Camera Technology)
 Presented in [EMDNN2016](http://allenai.org/plato/emdnn/), a NIPS2016 workshop ([arXiv link](https://arxiv.org/abs/1611.08588))
