@@ -5,7 +5,7 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
-#This is negative_ignore version of imdb class for Caltech Pedestrian dataset
+
 
 
 import re
@@ -183,7 +183,7 @@ class VaticGroup(imdb):
 
 
 class VaticData(imdb):
-    def __init__(self, name, class_set_name, train_split="train", test_split="test", CLS_mapper={}):
+    def __init__(self, name, classes, train_split="train", test_split="test", CLS_mapper={}):
         
         imdb.__init__(self,'vatic_' + name)
         assert data_map.has_key(name),\
@@ -195,13 +195,18 @@ class VaticData(imdb):
         
         self.CLS_mapper = CLS_mapper
         
-        self._classes = CLASS_SETS[class_set_name]
+        self._classes = classes
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         
         annotation_path = os.path.join(self._data_path, "annotations.json")         
         assert os.path.exists(annotation_path), \
                 'Annotation path does not exist.: {}'.format(annotation_path)
-        self._annotation = json.load(open(annotation_path))   
+        self._annotation = json.load(open(annotation_path))
+        
+        self.original_classes = self.get_original_classes()
+        
+        
+        
         
         meta_data_path = os.path.join(self._data_path, "meta.json")         
        
@@ -229,7 +234,15 @@ class VaticData(imdb):
         self._image_ext = self._meta["format"]    
         self._image_ext = '.jpg'
         self._image_index = self._get_image_index()
-
+    
+    
+    def get_original_classes(self):
+        original_classes = set()
+        for set_num in self._annotation:
+            for bboxes in self._annotation[set_num].values():
+                for bbox in bboxes.values():
+                    original_classes.add(bbox['label'])
+        return original_classes                 
        
     
 

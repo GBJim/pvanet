@@ -3,6 +3,9 @@ CLASS_SETS["pedestrian"] = ('__background__', # always index 0
                          'person')
 
 
+CLASS_SETS["vehicle-types"] = tuple(['__background__', "van", "sedan/suv", "pickup", "not-target"] + ['empty']* 76)
+
+
 CLASS_SETS["voc"] = ('__background__', # always index 0
                          'aeroplane', 'bicycle', 'bird', 'boat',
                          'bottle', 'bus', 'car', 'cat', 'chair',

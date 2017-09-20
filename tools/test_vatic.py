@@ -270,7 +270,7 @@ if __name__ == '__main__':
     
     cfg_from_file("models/pvanet/cfgs/submit_1019.yml")
     output_name = "PVANET"
-    data_name = "YuDa"    
+    data_name = "tanktruck"    
     classes = CLASS_SETS["coco"]
     prototxt = "models/pvanet/lite/coco_test.prototxt"
     caffemodel = "models/pvanet/lite/test.model"
