@@ -24,12 +24,18 @@ import numpy as np
 import scipy.io as sio
 import caffe, os, sys, cv2
 
-def _detect(net, classes, img_path, CONF_THRESH = 0.8, NMS_THRESH = 0.3):
+def _detect(net, classes, img_path, roi=(0,0,0,0), CONF_THRESH = 0.8, NMS_THRESH = 0.3):
     outputs = []    
     im = cv2.imread(img_path)
+
+    if roi[2] > 0:
+        roiImage = im[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]] # y1, y2, x1, x2
+    else:
+        roiImage = im.copy()
+
     #print(img_path)
     _t = {'im_preproc': Timer(), 'im_net' : Timer(), 'im_postproc': Timer(), 'misc' : Timer()}
-    scores, boxes = im_detect(net, im, _t)
+    scores, boxes = im_detect(net, roiImage, _t)
     for cls_ind, cls in enumerate(classes[1:]):
         cls_ind += 1 # because we skipped background
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
@@ -46,8 +52,9 @@ def _detect(net, classes, img_path, CONF_THRESH = 0.8, NMS_THRESH = 0.3):
 
             xmin, ymin, xmax, ymax = bbox
             xmin, ymin, xmax, ymax = float(xmin), float(ymin), float(xmax), float(ymax)
-            output = {"class":cls,"xmin":xmin,"ymin":ymin,"xmax":xmax,\
-                "ymax":ymax, "score":score}
+
+            output = {"class":cls,"xmin":xmin+roi[0],"ymin":ymin+roi[1],"xmax":xmax+roi[0],\
+                "ymax":ymax+roi[1], "score":score}
             outputs.append(output)
 
     
@@ -82,9 +89,9 @@ def merge_outputs(outputs_main, outputs_sub, IOU_THRESH=0.75):
     return outputs_main
     
     
-def dual_detect(net_main, net_sub, classes_main, classes_sub, img_path, IOU_THRESH=0.75):
-    outputs_main = _detect(net_main, CLASSES_main, img_path)
-    outputs_sub = _detect(net_sub, CLASSES_sub, img_path)
+def dual_detect(net_main, net_sub, classes_main, classes_sub, img_path, roi=(0,0,0,0), IOU_THRESH=0.75):
+    outputs_main = _detect(net_main, CLASSES_main, img_path, roi)
+    outputs_sub = _detect(net_sub, CLASSES_sub, img_path, roi)
     return  merge_outputs(outputs_main , outputs_sub, IOU_THRESH)
     
  
@@ -117,8 +124,8 @@ def get_IOU(box_a, box_b):
 
     return intersection / union_area    
     
-def detect(img_path):
-    return (dual_detect(net_main, net_sub, CLASSES_main, CLASSES_sub, img_path, IOU_THRESH=0.75))
+def detect(img_path, roi=(0,0,0,0), thresh=0.75):
+    return (dual_detect(net_main, net_sub, CLASSES_main, CLASSES_sub, img_path, roi, thresh))
 
 def set_mode_cpu():
     caffe.set_mode_cpu()
