@@ -59,7 +59,7 @@ def prepare_data():
     sub_classes = CLASS_SETS['vehicle-types']
     mapper = {"van":"car", "trailer-head":"truck",\
               "sedan/suv":"car", "scooter":"motorcycle", "bike":"bicycle", "pickup": "car"}  
-    vatic_names = ["A1HighwayDay", 'B2HighwayNight', "pickup", "tanktruck"]
+    vatic_names = ["A1HighwayDay", 'B2HighwayNight', "pickup", "tanktruck", "van", "PU_Van"]
     vatics = [VaticData(vatic_name, main_classes, sub_classes, CLS_mapper=mapper) for vatic_name in vatic_names]        
     imdb_group = IMDBGroup(vatics)       
     imdb, roidb = combined_roidb(imdb_group)
@@ -102,23 +102,22 @@ if __name__ == '__main__':
     
    
     
-    
        
     # Set each training parameter    
     solver = "models/pvanet/lite/hierachy/solver.prototxt"
-    train_pt = "models/pvanet/lite/hierachy/v4_train.prototxt"
+    train_pt = "models/pvanet/lite/hierachy/v6_train.prototxt"
     caffenet = "/root/data/PVA-RC/rc3/rc3_iter_200000.caffemodel"
     
     #The bbox_pred_name is used to specify the new name of bbox_pred layer in the modified prototxt. bbox_pred layer is handeled differentlly in the snapshooting procedure for the purpose of bbox normalization. In order to prevent sanpshotting the un-tuned bbox_pred layer, we need to specify the new name.  
     bbox_pred_name = "bbox_pred-coco"
     #The ouput directory and prefix for snapshots
-    output_dir = "models/hierarchy/v4"
-    output_prefix = "v4"    
+    output_dir = "models/hierarchy/v6"
+    output_prefix = "v6"    
     #The maximum iterations is controlled in here instead of in solver
     max_iters = 5 * 10000       
     net_params = (solver, train_pt, caffenet,bbox_pred_name, max_iters, output_dir, output_prefix)
     
-    GPU_ID=4
+    GPU_ID=3
     #Start to finetune
     finetune(net_params, roidb,GPU_ID)
     

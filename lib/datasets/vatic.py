@@ -396,6 +396,8 @@ class VaticData(imdb):
             #print(label, self.CLS_mapper)
             if label in self.CLS_mapper:
                 label = self.CLS_mapper[label]
+                if label == '__background__':
+                    continue
             cls = self._class_to_ind[label]
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls  
