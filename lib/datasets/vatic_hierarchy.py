@@ -72,6 +72,13 @@ class IMDBGroup(imdb):
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
+            #print(self.roidb[i]['boxes'])
+            #print(boxes[:, 2] - boxes[:, 0])
+            if not (boxes[:, 2] >= boxes[:, 0]).all():
+                print("Abnormal", oldx1 , oldx2)
+                print(i)
+           
+              
             assert (boxes[:, 2] >= boxes[:, 0]).all()
             entry = {'boxes' : boxes,
                      'gt_overlaps' : self.roidb[i]['gt_overlaps'],
@@ -88,6 +95,13 @@ class IMDBGroup(imdb):
             assert self._datasets[0]._classes == dataset._classes, \
             "The class set are inconsistent.  {}/{}  and {}/{}".format(self._datasets[0].name,\
                                                                        self._datasets[0]._classes, dataset.name, dataset._classes)
+            assert self._datasets[0]._sub_classes == dataset._sub_classes, \
+            "The class set are inconsistent.  {}/{}  and {}/{}".format(self._datasets[0].name,\
+                                                                       self._datasets[0]._sub_classes, dataset.name, dataset.sub_classes) 
+            
+            
+            
+            
     
     def _get_img_paths(self):
         
@@ -115,12 +129,48 @@ class IMDBGroup(imdb):
         for dataset in self._datasets:
             gt_roidb += dataset.gt_roidb()
         return gt_roidb
+    
+  
+    def bbox_status(self, sub_ignores=["empty", "not-target"]):
+        status = {"total": 0}
+        sub_status = {"total": 0}
+        roidb = self.gt_roidb()
+        for data in roidb:
+            gt_classes = data['gt_classes']
+            sub_gt_classes = data['sub_gt_classes']
+            status["total"] += len(gt_classes)
+            for gt_class in gt_classes:
+                #print(gt_class, len( self._classes))
+                gt_name = self._datasets[0]._classes[gt_class]
+                status[gt_name] = status.get(gt_name, 0)+ 1
+                
+            for sub_gt_class in sub_gt_classes:
+                sub_gt_name = self._datasets[0]._sub_classes[sub_gt_class]
+                if sub_gt_name in sub_ignores:
+                    continue
+                sub_status["total"] += 1   
+                sub_status[sub_gt_name] = sub_status.get(sub_gt_name, 0)+ 1    
+            
+        for class_name in status:
+            if class_name == "total":
+                continue
+            status[class_name] = (status[class_name], status[class_name] / float(status["total"]))
+        for sub_class_name in sub_status:
+            if sub_class_name == "total":
+                continue
+            sub_status[sub_class_name] = (sub_status[sub_class_name], sub_status[sub_class_name] / float(sub_status["total"]))    
+            
+        
+        return status, sub_status
+    
+        
 
     
     def __init__(self, datasets):
         self._datasets = datasets
         self._check_consistency()
         self._classes = self._datasets[0]._classes
+        self._sub_classes = self._datasets[0]._sub_classes
         name = " ".join([dataset.name for dataset in datasets])
         
         imdb.__init__(self,'IMDB Groups:{}'.format(name))
@@ -272,6 +322,40 @@ class VaticData(imdb):
         self._image_ext = self._meta["format"]    
         self._image_ext = '.jpg'
         self._image_index = self._get_image_index()
+        
+        
+        
+    def bbox_status(self, sub_ignores=["empty", "not-target"]):
+        status = {"total": 0}
+        sub_status = {"total": 0}
+        roidb = self.gt_roidb()
+        for data in roidb:
+            gt_classes = data['gt_classes']
+            sub_gt_classes = data['sub_gt_classes']
+            status["total"] += len(gt_classes)
+            for gt_class in gt_classes:
+                #print(gt_class, len( self._classes))
+                gt_name = self._classes[gt_class]
+                status[gt_name] = status.get(gt_name, 0)+ 1
+                
+            for sub_gt_class in sub_gt_classes:
+                sub_gt_name = self._sub_classes[sub_gt_class]
+                if sub_gt_name in sub_ignores:
+                    continue
+                sub_status["total"] += 1   
+                sub_status[sub_gt_name] = sub_status.get(sub_gt_name, 0)+ 1    
+            
+        for class_name in status:
+            if class_name == "total":
+                continue
+            status[class_name] = (status[class_name], status[class_name] / float(status["total"]))
+        for sub_class_name in sub_status:
+            if sub_class_name == "total":
+                continue
+            sub_status[sub_class_name] = (sub_status[sub_class_name], sub_status[sub_class_name] / float(sub_status["total"]))    
+            
+        
+        return status, sub_status    
     
     
     def get_original_classes(self):

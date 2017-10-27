@@ -10,6 +10,12 @@ CLASS_SETS["NCTU-vehicles"] = ('__background__', "van", "sedan/suv", "pickup", '
                                    'motorcycle', 'bicycle')
 
 
+
+CLASS_SETS["3-car"] = ('__background__', "van", "sedan/suv", "pickup")
+
+CLASS_SETS["fire"] = ('__background__', 'fire')
+
+
 CLASS_SETS["voc"] = ('__background__', # always index 0
                          'aeroplane', 'bicycle', 'bird', 'boat',
                          'bottle', 'bus', 'car', 'cat', 'chair',

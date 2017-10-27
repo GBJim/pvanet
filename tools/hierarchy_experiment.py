@@ -1,5 +1,9 @@
 """
 COCO 2014 train + coco 2014 val + Vatic[Yuda, A1Highwayday, A2HighwayNight]
+
+
+Adding NCTU data
+
 """
 
 
@@ -59,9 +63,14 @@ def prepare_data():
     sub_classes = CLASS_SETS['vehicle-types']
     mapper = {"van":"car", "trailer-head":"truck",\
               "sedan/suv":"car", "scooter":"motorcycle", "bike":"bicycle", "pickup": "car"}  
-    vatic_names = ["A1HighwayDay", 'B2HighwayNight', "pickup", "tanktruck", "van", "PU_Van"]
-    vatics = [VaticData(vatic_name, main_classes, sub_classes, CLS_mapper=mapper) for vatic_name in vatic_names]        
-    imdb_group = IMDBGroup(vatics)       
+    vatic_names = ["A1HighwayDay", 'B2HighwayNight', "pickup", "tanktruck", "van", "PU_Van", "Sedans_1", "Sedans_2"]
+    vatics = [VaticData(vatic_name, main_classes, sub_classes, CLS_mapper=mapper, train_split="all") for vatic_name in vatic_names]   
+    NCTU_VIDEOS = [13, 17, 18, 19, 20, 3, 36, 38, 4, 5 ,6, 7, 8, 9, 10, 11, 12]
+    NCTU_vatic_names = ["NCTU_{}.MOV".format(video) for video in NCTU_VIDEOS]
+    NCTU_vatics = [VaticData(vatic_name, main_classes, sub_classes, CLS_mapper=mapper, train_split="all") for vatic_name in NCTU_vatic_names]   
+   
+    imdb_group = IMDBGroup(vatics + NCTU_vatics) 
+    #imdb_group = IMDBGroup(vatics)
     imdb, roidb = combined_roidb(imdb_group)
     total_len = float(len(imdb_group.gt_roidb()))
     print(total_len)
@@ -91,7 +100,7 @@ def finetune(net_params, roidb, GPU_ID=1):
               pretrained_model=caffenet, max_iters=max_iters, bbox_pred_name="bbox_pred-coco")
     
     
-    
+    Sedans_1
 
 
 if __name__ == '__main__':
@@ -111,8 +120,8 @@ if __name__ == '__main__':
     #The bbox_pred_name is used to specify the new name of bbox_pred layer in the modified prototxt. bbox_pred layer is handeled differentlly in the snapshooting procedure for the purpose of bbox normalization. In order to prevent sanpshotting the un-tuned bbox_pred layer, we need to specify the new name.  
     bbox_pred_name = "bbox_pred-coco"
     #The ouput directory and prefix for snapshots
-    output_dir = "models/hierarchy/v6"
-    output_prefix = "v6"    
+    output_dir = "models/hierarchy/v8"
+    output_prefix = "v8"    
     #The maximum iterations is controlled in here instead of in solver
     max_iters = 5 * 10000       
     net_params = (solver, train_pt, caffenet,bbox_pred_name, max_iters, output_dir, output_prefix)

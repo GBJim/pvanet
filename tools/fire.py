@@ -1,5 +1,7 @@
 """
-COCO 2014 train + coco 2014 val + Vatic[Yuda, A1Highwayday, A2HighwayNight]
+V2: Since V1 has too many False-Positive Examples. We integrate extra data to solve this problem in this stage.
+V3: Experiment that increase number of classes will help the feature learning.  Extend to seven classes
+V4: Increase the data amount of fire
 """
 
 
@@ -52,15 +54,21 @@ def prepare_data():
     #classes = coco_val._classes
     
   
-    CLS_mapper = {'sedan/suv': "__background__", 'person':"__background__"}
-    classes = ('__background__', 'fire')
+    CLS_mapper = {"bike":"bicycle", 'scooter': "motorcycle", "trailer-head": "truck"}
+    
+    
+    
+    
+    classes = ('__background__', 'fire', 'person', 'car', 'motorcycle', 'bus', 'truck', 'van', 'bicycle',"pickup", "sedan/suv")
     #Finnaly, let's wrap datasets from Vatic.
     #A vatic dataset directory should be located under ~/data/ directory in the naming of data-*
     #For example: ~/data/data-YuDa,  ~/data/data-A1HighwayDay
-    vatic_names = ["fire"]    
-    
-    
+    vatic_names = ["chruch_street", "pickup", "A1HighwayDay", "B2HighwayNight", "van", 'PU_Van', "YuDa"]
     vatics = [VaticData(vatic_name, classes, train_split="all",CLS_mapper=CLS_mapper) for vatic_name in vatic_names]
+    vatic_fire_1 = VaticData("fire", classes, train_split="all",CLS_mapper=CLS_mapper)
+    vatic_fire_2 = VaticData("fire2", classes, train_split="all",CLS_mapper=CLS_mapper)
+    vatics.append(vatic_fire_1)
+    vatics.append(vatic_fire_2)
     
     
     #Combine all the IMDBs into one single IMDB for training
@@ -119,20 +127,20 @@ if __name__ == '__main__':
     
        
     # Set each training parameter    
-    solver = "models/pvanet/lite/single_solver.prototxt"
-    train_pt = "models/pvanet/lite/single_train.prototxt"
+    solver = "models/pvanet/lite/ten_solver.prototxt"
+    train_pt = "models/pvanet/lite/ten_train.prototxt"
     caffenet = "models/pvanet/lite/test.model"
     
-    #The bbox_pred_name is used to specify the new name of bbox_pred layer in the modified prototxt. bbox_pred layer is handeled differentlly in the snapshooting procedure for the purpose of bbox normalization. In order to prevent sanpshotting the un-tuned bbox_pred layer, we need to specify the new name.  
+    #The bbox_pred_name is used 'person':"person", to specify the new name of bbox_pred layer in the modified prototxt. bbox_pred layer is handeled differentlly in the snapshooting procedure for the purpose of bbox normalization. In order to prevent sanpshotting the un-tuned bbox_pred layer, we need to specify the new name.  
     bbox_pred_name = "bbox_pred-coco"
     #The ouput directory and prefix for snapshots
-    output_dir = "models/fire/v1"
-    output_prefix = "v1"    
+    output_dir = "models/fire/v4"
+    output_prefix = "v4"    
     #The maximum iterations is controlled in here instead of in solver
     max_iters = 100 * 10000       
     net_params = (solver, train_pt, caffenet,bbox_pred_name, max_iters, output_dir, output_prefix)
     
- 
+    GPU_ID = 2
     #Start to finetune
-    finetune(net_params, roidb)
+    finetune(net_params, roidb, GPU_ID)
     
