@@ -23,18 +23,14 @@ CLASSES_sub = CLASS_SETS['subordinate']
 
 cfg_from_file(models_path + "/pvanet/cfgs/submit_160715.yml")
 
-prototxt_main = models_path + "/pvanet/lite/coco_test.prototxt"
-caffemodel_main = models_path + "/rc1_iter_200000.caffemodel"
-if not os.path.isfile(caffemodel_main):
+prototxt = models_path + "/pvanet/hierarchy/v1_test.prototxt"
+caffemodel = models_path + "/v8_iter_50000.caffemodel"
+if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found').format(caffemodel_main))
 
-prototxt_sub = models_path + "/pvanet/lite/coco_test.prototxt"
-caffemodel_sub = models_path + "/rc1_iter_200000.caffemodel"
-if not os.path.isfile(caffemodel_sub):
-        raise IOError(('{:s} not found').format(caffemodel_sub))
 
-net_main = caffe.Net(prototxt_main, caffemodel_main, caffe.TEST)
-net_sub = caffe.Net(prototxt_sub, caffemodel_sub, caffe.TEST)
+
+net = caffe.Net(prototxt, caffemodel, caffe.TEST)
 
 caffe.set_mode_gpu()
 caffe.set_device(0)

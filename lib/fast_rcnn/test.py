@@ -18,7 +18,14 @@ from fast_rcnn.nms_wrapper import nms
 import cPickle
 from utils.blob import im_list_to_blob
 import os
-from utils.cython_bbox import bbox_vote
+from utils.cython_bbox import bbox_overlaps
+
+
+def get_layer_name(blobs_out, prefix):
+    for layer_name in blobs_out.keys():
+        if prefix in layer_name:
+            return layer_name
+    
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -184,7 +191,8 @@ def im_detect(net, im, _t, boxes=None):
 
     if cfg.TEST.BBOX_REG:
         # Apply bounding-box regression deltas
-        box_deltas = blobs_out['bbox_pred']
+        bbox_pred_name = get_layer_name(blobs_out, "bbox_pred")
+        box_deltas = blobs_out[bbox_pred_name]
         pred_boxes = bbox_transform_inv(boxes, box_deltas)
         pred_boxes = clip_boxes(pred_boxes, im.shape)
     else:
@@ -198,6 +206,110 @@ def im_detect(net, im, _t, boxes=None):
     _t['im_postproc'].toc()
 
     return scores, pred_boxes
+
+
+
+
+def im_detect_hierarchy(net, im, _t, boxes=None):
+    """Detect object classes in an image given object proposals.
+
+    Arguments:
+        net (caffe.Net): Fast R-CNN network to use
+        im (ndarray): color image to test (in BGR order)
+        boxes (ndarray): R x 4 array of object proposals or None (for RPN)
+
+    Returns:
+        scores (ndarray): R x K array of object class scores (K includes
+            background as object category 0)
+        boxes (ndarray): R x (4*K) array of predicted bounding boxes
+    """
+    _t['im_preproc'].tic()
+    blobs, im_scales = _get_blobs(im, boxes)
+
+    # When mapping from image ROIs to feature map ROIs, there's some aliasing
+    # (some distinct image ROIs get mapped to the same feature ROI).
+    # Here, we identify duplicate feature ROIs, so we only compute features
+    # on the unique subset.
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        v = np.array([1, 1e3, 1e6, 1e9, 1e12])
+        hashes = np.round(blobs['rois'] * cfg.DEDUP_BOXES).dot(v)
+        _, index, inv_index = np.unique(hashes, return_index=True,
+                                        return_inverse=True)
+        blobs['rois'] = blobs['rois'][index, :]
+        boxes = boxes[index, :]
+
+    if cfg.TEST.HAS_RPN:
+        im_blob = blobs['data']
+        blobs['im_info'] = np.array(
+            [np.hstack((im_blob.shape[2], im_blob.shape[3], im_scales[0]))],
+            dtype=np.float32)
+
+    # reshape network inputs
+    net.blobs['data'].reshape(*(blobs['data'].shape))
+    if cfg.TEST.HAS_RPN:
+        net.blobs['im_info'].reshape(*(blobs['im_info'].shape))
+    else:
+        net.blobs['rois'].reshape(*(blobs['rois'].shape))
+
+    # do forward
+    net.blobs['data'].data[...] = blobs['data']
+    #forward_kwargs = {'data': blobs['data'].astype(np.float32, copy=False)}
+    if cfg.TEST.HAS_RPN:
+        net.blobs['im_info'].data[...] = blobs['im_info']
+        #forward_kwargs['im_info'] = blobs['im_info'].astype(np.float32, copy=False)
+    else:
+        net.blobs['rois'].data[...] = blobs['rois']
+        #forward_kwargs['rois'] = blobs['rois'].astype(np.float32, copy=False)
+    _t['im_preproc'].toc()
+
+    _t['im_net'].tic()
+    blobs_out = net.forward()
+    _t['im_net'].toc()
+    #blobs_out = net.forward(**forward_kwargs)
+
+    _t['im_postproc'].tic()
+    if cfg.TEST.HAS_RPN:
+        assert len(im_scales) == 1, "Only single-image batch implemented"
+        rois = net.blobs['rois'].data.copy()
+        # unscale back to raw image space
+        boxes = rois[:, 1:5] / im_scales[0]
+
+    if cfg.TEST.SVM:
+        # use the raw scores before softmax under the assumption they
+        # were trained as linear SVMs
+        scores = net.blobs['cls_score'].data
+        sub_scores = net.blobs['sub_cls_score'].data
+    else:
+        # use softmax estimated probabilities
+        scores = blobs_out['cls_prob']
+        sub_scores = blobs_out['sub_cls_prob']
+
+    if cfg.TEST.BBOX_REG:
+        # Apply bounding-box regression deltas
+        bbox_pred_name = get_layer_name(blobs_out, "bbox_pred")
+        box_deltas = blobs_out[bbox_pred_name]
+        pred_boxes = bbox_transform_inv(boxes, box_deltas)
+        pred_boxes = clip_boxes(pred_boxes, im.shape)
+    else:
+        # Simply repeat the boxes, once for each class
+        pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        # Map scores and predictions back to the original set of boxes
+        scores = scores[inv_index, :]
+        pred_boxes = pred_boxes[inv_index, :]
+    _t['im_postproc'].toc()
+
+    return scores, sub_scores, pred_boxes
+
+
+
+
+
+
+
+
+
 
 def vis_detections(im, class_name, dets, thresh=0.3):
     """Visual debugging of detections."""
@@ -240,7 +352,44 @@ def apply_nms(all_boxes, thresh):
             nms_boxes[cls_ind][im_ind] = dets[keep, :].copy()
     return nms_boxes
 
-def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
+def bbox_vote(dets_NMS, dets_all, thresh=0.5):
+    dets_voted = np.zeros_like(dets_NMS)   # Empty matrix with the same shape and type
+
+    _overlaps = bbox_overlaps(
+			np.ascontiguousarray(dets_NMS[:, 0:4], dtype=np.float),
+			np.ascontiguousarray(dets_all[:, 0:4], dtype=np.float))
+
+    # for each survived box
+    for i, det in enumerate(dets_NMS):
+        dets_overlapped = dets_all[np.where(_overlaps[i, :] >= thresh)[0]]
+        assert(len(dets_overlapped) > 0)
+
+        boxes = dets_overlapped[:, 0:4]
+        scores = dets_overlapped[:, 4]
+
+        out_box = np.dot(scores, boxes)
+
+        dets_voted[i][0:4] = out_box / sum(scores)        # Weighted bounding boxes
+        dets_voted[i][4] = det[4]                         # Keep the original score
+
+        # Weighted scores (if enabled)
+        if cfg.TEST.BBOX_VOTE_N_WEIGHTED_SCORE > 1:
+            n_agreement = cfg.TEST.BBOX_VOTE_N_WEIGHTED_SCORE
+            w_empty = cfg.TEST.BBOX_VOTE_WEIGHT_EMPTY
+
+            n_detected = len(scores)
+
+            if n_detected >= n_agreement:
+                top_scores = -np.sort(-scores)[:n_agreement]
+                new_score = np.average(top_scores)
+            else:
+                new_score = np.average(scores) * (n_detected * 1.0 + (n_agreement - n_detected) * w_empty) / n_agreement
+
+            dets_voted[i][4] = min(new_score, dets_voted[i][4])
+
+    return dets_voted
+
+def test_net(net, imdb, max_per_image=100, thresh=0.01, vis=False):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
     # all detections are collected into:
