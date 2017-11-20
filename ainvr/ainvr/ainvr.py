@@ -44,7 +44,7 @@ def detect(img_path, roi=(0,0,0,0), NMS_THRESH = 0.3, CONF_THRESH=0.75):
 
     #print(img_path)
     _t = {'im_preproc': Timer(), 'im_net' : Timer(), 'im_postproc': Timer(), 'misc' : Timer()}
-    scores, sub_scores, boxes = im_detect_hierarchy(net, im, _t)
+    scores, sub_scores, boxes = im_detect_hierarchy(net, roiImage, _t)
     for cls_ind, cls in enumerate(CLASSES_main[1:]):
         cls_ind += 1 # because we skipped background
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
@@ -88,5 +88,3 @@ def set_mode_gpu(gpu_id=0):
     caffe.set_mode_gpu()
     caffe.set_device(gpu_id)
     cfg.GPU_ID = gpu_id
-
-
