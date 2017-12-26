@@ -111,9 +111,10 @@ if __name__ == '__main__':
     solver = "/root/pva-faster-rcnn/models/kai_train_pvanet_7cls/full-three_solver.prototxt"
     train_pt = "/root/pva-faster-rcnn/models/kai_train_pvanet_7cls/full-three_train.prototxt"
     caffenet = "/root/pva-faster-rcnn/models/kai_train_pvanet_7cls/kai_train_iter_50000.caffemodel"
-    solver = "/root/pva-faster-rcnn/models/pvanet/lite/three_solver.prototxt"
-    train_pt = "/root/pva-faster-rcnn/models/pvanet/lite/three_train.prototxt"
-    caffenet = "/root/pva-faster-rcnn/models/pvanet/lite/test.model"
+    #caffenet = None
+    #solver = "/root/pva-faster-rcnn/models/pvanet/lite/three_solver.prototxt"
+    #train_pt = "/root/pva-faster-rcnn/models/pvanet/lite/three_train.prototxt"
+    #caffenet = "/root/pva-faster-rcnn/models/pvanet/lite/test.model"
     
     #The bbox_pred_name is used to specify the new name of bbox_pred layer in the modified prototxt. bbox_pred layer is handeled differentlly in the snapshooting procedure for the purpose of bbox normalization. In order to prevent sanpshotting the un-tuned bbox_pred layer, we need to specify the new name.  
     bbox_pred_name = "bbox_pred-coco"

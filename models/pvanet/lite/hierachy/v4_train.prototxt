@@ -1849,3 +1849,21 @@ layer {
     normalize: true
   }
 }
+###############################
+layer {
+ name: "silent_hill"
+ type: "Silence"
+ bottom: "bbox_pred-coco"
+ bottom: "cls_score-coco"
+ bottom: 'rpn_labels'
+ bottom: 'rpn_bbox_targets'
+ bottom: 'rpn_bbox_inside_weights'
+ bottom: 'rpn_bbox_outside_weights'
+ bottom: 'rois'
+ bottom: 'labels'
+ bottom: 'bbox_targets'
+ bottom: 'bbox_inside_weights'
+ bottom: 'bbox_outside_weights'
+ bottom: 'sub_labels'
+ 
+}

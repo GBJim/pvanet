@@ -212,7 +212,9 @@ def write_testing_results_file(net, imdb, skip, OUTPUT_DIR, CLASSES):
                     height =  bbox[3] - bbox[1] 
                     label = cls
                     socre = bbox[-1] * 100
-                    w.write("{},{},{},{},{},{},{}\n".format(frame_num, x, y, width, height, score, label))
+                    if label in TARGET_CLASSES:
+
+                        w.write("{},{},{},{},{},{},{}\n".format(frame_num, x, y, width, height, score, label))
           
 
             
@@ -252,38 +254,27 @@ def write_testing_results_file(net, imdb, skip, OUTPUT_DIR, CLASSES):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
-    
+    #TARGET_CLASSES = ["person", "backpack", "handbag", "suitcase"]
+    TARGET_CLASSES = ["car", "person", "bus", "van", "truck", "scooter", "bike", "pickup"]
     
     cfg_from_file("models/pvanet/cfgs/submit_1019.yml")
-    output_name = "PVANET"
-    data_name = "tanktruck"    
+    output_name = "rc5-20k"
+    data_name = "NYC"    
     classes = CLASS_SETS["coco"]
     prototxt = "models/pvanet/lite/coco_test.prototxt"
-    caffemodel = "models/pvanet/lite/test.model"
+    caffemodel = "/root/pva-faster-rcnn/models/rc/rc5/rc5_iter_200000.caffemodel"
+    #prototxt = "models/pvanet/lite/test.pt"
+    #caffemodel = "/root/pva-faster-rcnn/models/pvanet/lite/test.model"
     FPS_rate = 1
     GPU_ID = 3
-   
 
 
     imdb = get_imdb(data_name, classes)
     
    
     OUTPUT_DIR= os.path.join(imdb._data_path ,"res" ,output_name)    
-    if not os.path.exists(OUTPUT_DIR ):
+    if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR ) 
    
     
@@ -292,6 +283,7 @@ if __name__ == '__main__':
 
     if not os.path.isfile(caffemodel):
         raise IOError(('Caffemodel: {:s} not found').format(caffemodel))      
+    caffe.set_mode_gpu()
     caffe.set_device(GPU_ID)
     cfg.GPU_ID = GPU_ID
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
