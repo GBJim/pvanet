@@ -2,3 +2,6 @@
 	path = caffe-fast-rcnn
 	url = https://github.com/sanghoon/caffe.git
 	branch = dev_pvanet
+[submodule "iou_tracker"]
+	path = iou_tracker
+	url = https://github.com/GBJim/iou_tracker.git
