@@ -5,7 +5,7 @@ from iou_tracker.iou_tracker import Tracker
 
 font = cv2.FONT_HERSHEY_DUPLEX
 font_size = 0.8
-
+skip_rate = 1
 
 
 
@@ -68,7 +68,7 @@ def parse_detections(detections):
 
 
 
-cap = cv2.VideoCapture("rtsp://221.120.30.101/live.sdp")
+cap = cv2.VideoCapture("rtsp://admin:admin@172.16.26.241/cam/realmonitor?channel=1&subtype=1")
 tracker = Tracker(t_max = 30)
 
 
@@ -99,6 +99,9 @@ while(True):
     cv2.imshow('frame',frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+    for x in range(skip_rate):
+	cap.grab()
+	
 
 # When everything done, release the capture
 cap.release()
