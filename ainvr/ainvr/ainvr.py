@@ -13,10 +13,9 @@ Demo script showing detections in sample images.
 See README.md for installation instructions before running.
 """
 
-from  __init__ import net, CLASSES_main, CLASSES_sub
-
+from  __init__ import net, CLASSES_main
 from fast_rcnn.config import cfg, cfg_from_file, cfg_from_list
-from fast_rcnn.test import im_detect_hierarchy
+from fast_rcnn.test import im_detect
 from fast_rcnn.nms_wrapper import nms
 from datasets.config import CLASS_SETS 
 from utils.timer import Timer
@@ -44,7 +43,7 @@ def detect_img(im, roi=(0,0,0,0), NMS_THRESH = 0.3, CONF_THRESH=0.75):
 
     #print(img_path) 
     _t = {'im_preproc': Timer(), 'im_net' : Timer(), 'im_postproc': Timer(), 'misc' : Timer()}
-    scores, sub_scores, boxes = im_detect_hierarchy(net, roiImage, _t)
+    scores, boxes = im_detect(net, roiImage, _t)
     for cls_ind, cls in enumerate(CLASSES_main[1:]):
         cls_ind += 1 # because we skipped background
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
@@ -53,10 +52,8 @@ def detect_img(im, roi=(0,0,0,0), NMS_THRESH = 0.3, CONF_THRESH=0.75):
                           cls_scores[:, np.newaxis])).astype(np.float32)
         keep = dets[:, -1] >= CONF_THRESH
         dets = dets[keep, :]
-        filtered_sub_scores = sub_scores[keep, :]
-        keep = nms(dets, NMS_THRESH)
-        dets = dets[keep, :]
-        filtered_sub_scores =  filtered_sub_scores[keep, :]
+	keep = nms(dets, NMS_THRESH)
+	dets = dets[keep, :]
         #inds = np.where(dets[:, -1] >= CONF_THRESH)[0]
 
         for i in range(dets.shape[0]):
@@ -69,10 +66,6 @@ def detect_img(im, roi=(0,0,0,0), NMS_THRESH = 0.3, CONF_THRESH=0.75):
             output = {"class":cls,"xmin":xmin+roi[0],"ymin":ymin+roi[1],"xmax":xmax+roi[0],\
                 "ymax":ymax+roi[1], "score":score}
 
-            if cls == "car":
-                sub_cls, sub_score = get_sub_cls(filtered_sub_scores[i])
-                if sub_cls != "__background__":
-                    output["sub"] = {"class": sub_cls, "score":sub_score}
 
 
 

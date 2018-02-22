@@ -19,12 +19,11 @@ from datasets.config import CLASS_SETS
 import caffe,os  
 
 CLASSES_main = CLASS_SETS['main']
-CLASSES_sub = CLASS_SETS['subordinate'] 
 
 cfg_from_file(models_path + "/pvanet/cfgs/submit_160715.yml")
 
-prototxt = models_path + "/pvanet/hierarchy/v1_test.prototxt"
-caffemodel = models_path + "/v8_iter_50000.caffemodel"
+prototxt = models_path + "/pvanet/lite/coco_test.prototxt"
+caffemodel = models_path + "/testPedestrian1_iter_130000.caffemodel"
 if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found').format(caffemodel_main))
 
