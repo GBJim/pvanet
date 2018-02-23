@@ -6,6 +6,7 @@ from iou_tracker.iou_tracker import Tracker
 font = cv2.FONT_HERSHEY_DUPLEX
 font_size = 0.8
 skip_rate = 1
+target_labels = ['person']
 
 
 
@@ -48,16 +49,17 @@ def render_tracks(im, tracks):
   
 
 
-def parse_detections(detections):
+def parse_detections(detections, target_labels):
     parsed_detections = []
     for detection in detections:
-	score = detection["score"]
-	xmin = detection['xmin']
-	xmax = detection['xmax']
-	ymin = detection['ymin']
-	ymax = detection['ymax'] 
-	bbox = (xmin, ymin, xmax,  ymax)
-	parsed_detections.append({"bbox":bbox, "score":score})
+	if detection['class'] in target_labels:
+		score = detection["score"]
+		xmin = detection['xmin']
+		xmax = detection['xmax']
+		ymin = detection['ymin']
+		ymax = detection['ymax'] 
+		bbox = (xmin, ymin, xmax,  ymax)
+		parsed_detections.append({"bbox":bbox, "score":score})
 	
     return parsed_detections
 
@@ -83,7 +85,7 @@ while(True):
 	print("Empty frame received!")
 	continue
     detections = ainvr.detect_img(frame)
-    parsed_detections = parse_detections(detections)
+    parsed_detections = parse_detections(detections, target_labels)
     tracks = tracker.track(parsed_detections)
     print(tracks)
     
